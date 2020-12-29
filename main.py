@@ -29,8 +29,6 @@ def dollars_to_time(dollars, time):
     elif time == 'd':
         return round(dollars / daily_wage, 2)
 
- 
-
 def get_accounts_and_balances(data):
     """
     Takes one argument (data) and returns the account names and balances for the up bank account
