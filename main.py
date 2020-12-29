@@ -1,10 +1,13 @@
 import requests
 import json
+import iso8601
+from datetime import datetime
 from pprint import pprint
 
 base_url = 'https://api.up.com.au/api/v1'
 token = 'up:yeah:09mrmEuny7LbmCL2VUEBHf5Qwo8Lwp7He8X6nL1mOLs4nZxJZ61EyPFSpFi2DYKEidzw93qI5xOtdiA7iWowiRdsFGXuRAYLpiMg1XJHtLUwnEz0qpA3bbgvCNYZDlKw'
 headers = {'Authorization' : 'Bearer ' + token}
+payload = {'page[size]': 100}
 transactional_account_id = '7f947112-89cd-4944-b9b3-818f39da7bc4'
 
 #Set variables for income.
@@ -49,21 +52,56 @@ accounts_and_balances = get_accounts_and_balances(data)
 
 # pprint(accounts_and_balances.values())
 #Ping Up to get my transactional data
-#To do: Get more than 10 records. Need to work out how pagination works.
-transactions_request = requests.get(base_url + '/transactions', transactional_account_id, headers=headers)
+results = []
 
-transaction_data =  transactions_request.json()
+transactions_request = requests.get(
+base_url + '/transactions', 
+headers=headers, 
+params=payload)
 
-transaction_amounts = [abs(float(i.get('attributes').get('amount').get('value'))) for i in transaction_data['data'] if i.get('attributes').get('description') != 'Round Up' and float(i.get('attributes').get('amount').get('value')) < 0]
+#Loop through the pages to retrieve data
+#To do: Use the filtering options. I think this needs to be plugged in via the payload
+for i in range(3):
+    print(transactions_request)
+    transaction_data = transactions_request.json()
+    results.append(transaction_data)
+    transactions_request = requests.get(transaction_data.get('links').get('next'), headers=headers)
+# total_spending = sum(transaction_amounts)
+transaction_values = {}
 
-total_spending = sum(transaction_amounts)
+for page in results:
+    for i in page['data']:
+        if i.get('attributes').get('description') != 'Round Up' and float(i.get('attributes').get('amount').get('value')) < 0:
+            transaction_values[i.get('attributes').get('description') + ' ' + i.get('attributes').get('createdAt')] = i.get('attributes').get('amount').get('value')
 
-for i in transaction_data['data']:
-    if i.get('attributes').get('description') != 'Round Up' and float(i.get('attributes').get('amount').get('value')) < 0:
-        print(
-            i.get('attributes').get('description'), 
-            i.get('attributes').get('amount').get('value'),
-            'This equates to approximately ' +  str(round(abs(float(i.get('attributes').get('amount').get('value'))) / minute_wage, 2)) + ' minutes of work'
-            )
+        
+# transaction_amounts = [abs(float(i.get('attributes').get('amount').get('value'))) for i in transaction_data['data'] if i.get('attributes').get('description') != 'Round Up' and float(i.get('attributes').get('amount').get('value')) < 0]
 
-print(f'You have spent approximately {str(round(total_spending / minute_wage))} minutes of time ({str(round(total_spending / hourly_wage))} hours)')
+print(transaction_values)
+
+#Loop through and grab every salary in the dataset. 
+# #To do: Look for an alternative way to identify it as a salary. Using a string match feels rubbish.
+fortnightly_salary = {}
+
+for page in results:
+    for i in page['data']:
+        if i.get('attributes').get('rawText') == 'Youi Salaries Ac':
+            pprint(i)
+            #Format the date into something reasonable
+            #To do: Need to handle timezones properly for this, currently based on Melbourne time I think
+            date = iso8601.parse_date(i.get('attributes').get('createdAt')).strftime('%d/%m/%Y %H:%M:%S')
+            value = i.get('attributes').get('amount').get('value')
+            fortnightly_salary[date] = value
+
+print(fortnightly_salary)
+
+# for item in results:
+#     for i in item['data']:
+#         if i.get('attributes').get('description') != 'Round Up' and float(i.get('attributes').get('amount').get('value')) < 0:
+#             print(
+#                 i.get('attributes').get('description'), 
+#                 i.get('attributes').get('amount').get('value'),
+#                 'This equates to approximately ' +  str(round(abs(float(i.get('attributes').get('amount').get('value'))) / minute_wage, 2)) + ' minutes of work'
+#                 )
+
+# print(f'You have spent approximately {str(round(total_spending / minute_wage))} minutes of time ({str(round(total_spending / hourly_wage))} hours)')
