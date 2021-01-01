@@ -2,6 +2,7 @@ import requests
 import json
 import iso8601
 from datetime import datetime
+import statistics
 from pprint import pprint
 
 base_url = 'https://api.up.com.au/api/v1'
@@ -77,23 +78,26 @@ for page in results:
         
 # transaction_amounts = [abs(float(i.get('attributes').get('amount').get('value'))) for i in transaction_data['data'] if i.get('attributes').get('description') != 'Round Up' and float(i.get('attributes').get('amount').get('value')) < 0]
 
-print(transaction_values)
-
 #Loop through and grab every salary in the dataset. 
 # #To do: Look for an alternative way to identify it as a salary. Using a string match feels rubbish.
-fortnightly_salary = {}
+            
+fortnightly_pays = []
 
 for page in results:
     for i in page['data']:
         if i.get('attributes').get('rawText') == 'Youi Salaries Ac':
-            pprint(i)
             #Format the date into something reasonable
             #To do: Need to handle timezones properly for this, currently based on Melbourne time I think
-            date = iso8601.parse_date(i.get('attributes').get('createdAt')).strftime('%d/%m/%Y %H:%M:%S')
-            value = i.get('attributes').get('amount').get('value')
-            fortnightly_salary[date] = value
+            value = float(i.get('attributes').get('amount').get('value'))
+            fortnightly_pays.append(value)
 
-print(fortnightly_salary)
+print(fortnightly_pays)
+
+##Guessing the salary by taking the median salary amount if that's the same as the mean
+if statistics.median(fortnightly_pays) == sum(fortnightly_pays) / len(fortnightly_pays):
+    guessed_salary = statistics.median(fortnightly_pays)
+
+print(guessed_salary)
 
 # for item in results:
 #     for i in item['data']:

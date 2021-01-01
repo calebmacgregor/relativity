@@ -1,0 +1,16 @@
+{
+    "name": "Caleb MacGregor",
+    "transactions": {
+        "transaction1": {
+            "date": "2020-01-01",
+            "amount": 500.00,
+            "vendor": "vendor_name",
+            "latest": true
+        }
+    },
+    "salary": {
+        "frequency": "fortnightly",
+        "amount": 500.00,
+        "hours": 80
+    }
+}
